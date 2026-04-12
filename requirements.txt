@@ -1,10 +1,11 @@
-python-telegram-bot==20.7
+python-telegram-bot>=22.7
 anthropic==0.18.0
 httpx==0.26.0
-sqlalchemy==2.0.25
+sqlalchemy>=2.0.36
 psycopg2-binary==2.9.9
 redis==5.0.1
 python-dotenv==1.0.0
 phonenumbers==8.13.27
 aiofiles==23.2.1
 langdetect==1.0.9
+Pillow==10.2.0

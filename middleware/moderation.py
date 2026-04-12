@@ -1,4 +1,10 @@
-def is_defensive_request(text: str) -> bool:
+from config import BANNED_KEYWORDS
+
+
+def find_banned_keywords(text: str) -> list[str]:
     lower_text = text.lower()
-    blocked_terms = ["hack", "exploit", "malware", "phishing kit"]
-    return not any(term in lower_text for term in blocked_terms)
+    return [keyword for keyword in BANNED_KEYWORDS if keyword in lower_text]
+
+
+def is_defensive_request(text: str) -> bool:
+    return len(find_banned_keywords(text)) == 0
