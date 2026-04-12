@@ -9,6 +9,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Cont
 
 from config import settings
 from middleware.guards import check_text_policy
+from middleware.quota import check_quota
 from services.scanner import ScannerService
 from services.transcription import WhisperTranscriptionService
 
@@ -135,6 +136,7 @@ def _build_voice_result_text(transcript: str, analysis: dict, *, deepfake_percen
     return "\n".join(lines)
 
 
+@check_quota
 async def voice_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return

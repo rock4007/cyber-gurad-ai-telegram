@@ -21,7 +21,9 @@ from handlers.social import maybe_handle_social_message, register_social_handler
 from handlers.start import help_command, register_start_handlers, start_command
 from handlers.url import maybe_handle_url_message, register_url_handlers
 from handlers.voice import register_voice_handlers
-from middleware.guards import check_text_policy, quota_guard
+from middleware.guards import check_text_policy
+from middleware.moderation import register_moderation_middleware
+from middleware.quota import check_quota, quota_guard
 from services.formatter import format_scan_result
 from services.scanner import ScannerService
 
@@ -52,9 +54,9 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not update.message:
         return
     user_key = str(update.effective_user.id) if update.effective_user else "0"
-    remaining = quota_guard.remaining(user_key)
+    remaining = await quota_guard.remaining(user_key)
     await update.message.reply_text(
-        f"Daily free-plan quota remaining: {remaining} scans"
+        f"Monthly quota remaining: {remaining} scans"
     )
 
 
@@ -96,6 +98,7 @@ def _contains_url(text: str) -> bool:
     return bool(re.search(r"(https?://\S+|www\.\S+)", text, re.IGNORECASE))
 
 
+@check_quota
 async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.text:
         return
@@ -146,6 +149,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     await update.message.reply_text(format_scan_result(scan_payload))
 
 
+@check_quota
 async def contact_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.contact:
         return
@@ -207,6 +211,8 @@ async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def build_application() -> Application:
     application = ApplicationBuilder().token(settings.bot_token).post_init(post_init).build()
+
+    register_moderation_middleware(application)
 
     register_start_handlers(application)
     register_phone_handlers(application)

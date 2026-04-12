@@ -12,6 +12,7 @@ from telegram.ext import Application, CallbackQueryHandler, ContextTypes, Messag
 
 from config import MAX_FILE_SIZE, settings
 from middleware.guards import check_text_policy
+from middleware.quota import check_quota
 from services.scanner import ScannerService
 
 
@@ -202,6 +203,7 @@ async def _next_image_report_id(context: ContextTypes.DEFAULT_TYPE) -> int:
     return current
 
 
+@check_quota
 async def image_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return

@@ -9,6 +9,7 @@ from telegram.ext import Application, CallbackQueryHandler, ContextTypes, Messag
 
 from config import MAX_FILE_SIZE, settings
 from middleware.guards import check_text_policy
+from middleware.quota import check_quota
 from services.scanner import ScannerService
 
 
@@ -113,6 +114,7 @@ async def _next_file_report_id(context) -> int:
     return current
 
 
+@check_quota
 async def file_command(update: Update, context) -> None:
     if not update.message:
         return

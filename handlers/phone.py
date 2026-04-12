@@ -8,6 +8,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Cont
 
 from config import settings
 from middleware.guards import check_text_policy
+from middleware.quota import check_quota
 from services.scanner import ScannerService
 
 
@@ -215,6 +216,7 @@ async def maybe_handle_phone_text(update: Update, context: ContextTypes.DEFAULT_
     return await _process_phone_text(update, context, text)
 
 
+@check_quota
 async def phone_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
