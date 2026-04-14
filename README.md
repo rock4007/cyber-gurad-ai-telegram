@@ -1,94 +1,79 @@
 # CyberGuard AI Telegram Bot
 
-CyberGuard AI is a defensive Telegram bot for analyzing suspicious phone numbers, URLs, social media profiles, files, images, and voice messages. It is designed for scam detection, fraud triage, and user safety guidance only.
+CyberGuard AI is a defensive Telegram bot that analyzes suspicious phone numbers, URLs, files, images, and voice notes. This repository is ready for Railway.app deployment on a free stack.
 
-## Features
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new)
 
-- Phone number scam analysis with country and carrier context
-- URL and phishing link analysis with detailed explanation output
-- Social media handle and profile scanning with local threat-intel checks
-- File scanning with hash generation and malware-style reporting
-- Image metadata analysis with GPS detection and approximate location lookup
-- Voice message transcription with Whisper-compatible APIs and scam phrase detection
-- Backend explanation output for clearer user-facing reasoning
-- Optional live threat-intel enrichment from external providers
+## Required Environment Variables
 
-## Setup
+| Variable | Required | Example |
+|---|---|---|
+| BOT_TOKEN | Yes | 123456:ABCDEF |
+| ANTHROPIC_API_KEY | Yes | sk-ant-api03-xxxx |
+| DATABASE_URL | Yes | postgresql://user:pass@host/db |
+| REDIS_URL | Yes | redis://default:pass@host:6379 |
+| ADMIN_IDS | Yes | 123456789,987654321 |
+| BACKEND_URL | Yes | https://your-api.up.railway.app |
+| ENVIRONMENT | Yes | production |
 
-1. Copy [.env.example](d:\telegram bot\cyberguard-telegram\.env.example) to `.env`.
-2. Fill in the required bot settings:
+## Setup (Max 5 Steps)
 
-```env
-BOT_TOKEN=
-ANTHROPIC_API_KEY=
-DATABASE_URL=
-REDIS_URL=
-ADMIN_IDS=
-BACKEND_URL=
-ENVIRONMENT=development
-```
+1. Clone this repo and open the cyberguard-telegram folder.
+2. Install Python dependencies from requirements.txt.
+3. Create Railway project and set all required environment variables.
+4. Add free PostgreSQL and Redis connection strings.
+5. Deploy and verify bot startup logs show python main.py running.
 
-3. Install dependencies:
+## Railway CLI Commands (Exact)
 
-```powershell
-pip install -r requirements.txt
-```
+# Install Railway CLI
+npm i -g @railway/cli
 
-4. Start the Telegram bot:
+# Login
+railway login
 
-```powershell
-python main.py
-```
+# Create project
+railway init
 
-## Optional AI Keys
+# Set environment variables
+railway vars set BOT_TOKEN=xxx
+railway vars set ANTHROPIC_API_KEY=xxx
+railway vars set DATABASE_URL=xxx
+railway vars set REDIS_URL=xxx
 
-These enable richer transcription and model integrations:
+# Deploy
+railway up
 
-```env
-OPENAI_API_KEY=
-WHISPER_API_KEY=
-WHISPER_API_URL=https://api.openai.com/v1/audio/transcriptions
-WHISPER_MODEL=whisper-1
-```
+## Free Database Options
 
-`WHISPER_API_KEY` or `OPENAI_API_KEY` is required for real voice transcription.
+### PostgreSQL (Neon free tier)
 
-## Optional Threat Intel And Dark Web Keys
+- Provider: neon.tech
+- Free tier: up to 3 GB storage
+- Steps:
+1. Create a Neon project and database.
+2. Copy the pooled PostgreSQL connection string.
+3. In Railway, set DATABASE_URL to the Neon URL.
+4. Ensure sslmode=require is present if Neon requires SSL.
 
-These keys are optional. When present in the backend environment, live enrichment can add indicators, explanation context, and score boosts.
+### Redis (Upstash free tier)
 
-```env
-SHODAN_API_KEY=
-VIRUSTOTAL_API_KEY=
-HIBP_API_KEY=
-INTELLIGENCEX_API_KEY=
-DEHASHED_API_KEY=
-DEHASHED_EMAIL=
-HUNTER_API_KEY=
-URLSCAN_API_KEY=
-```
+- Provider: upstash.com
+- Free tier: 10k commands/day
+- Steps:
+1. Create an Upstash Redis database.
+2. Copy the Redis URL.
+3. In Railway, set REDIS_URL to the Upstash URL.
+4. Redeploy after variables are saved.
 
-Current live integrations use the most direct supported providers:
+## Connect Neon + Upstash to Railway
 
-- `HIBP_API_KEY` for Have I Been Pwned email breach lookups
-- `DEHASHED_API_KEY` and `DEHASHED_EMAIL` for exposed-record lookups
-- `HUNTER_API_KEY` for email verification risk context
-- `VIRUSTOTAL_API_KEY` for domain reputation checks
-- `URLSCAN_API_KEY` for historical scan context
-- `SHODAN_API_KEY` for IP infrastructure exposure context
+1. Open Railway project Settings and Variables.
+2. Paste Neon URL as DATABASE_URL.
+3. Paste Upstash URL as REDIS_URL.
+4. Add remaining required bot variables.
+5. Run railway up and monitor logs until worker is healthy.
 
-`INTELLIGENCEX_API_KEY` is wired into config for future provider expansion.
+## Screenshot Placeholder
 
-## Safety Scope
-
-CyberGuard AI is for defensive analysis only.
-
-- Scan only user-provided content
-- Do not use it for tracking or offensive purposes
-- Do not treat results as legal proof without independent verification
-
-## Notes
-
-- On Windows, temporary voice and file scans use the OS temp directory instead of a Unix `/tmp` path.
-- Image location display is privacy-gated and only revealed on explicit user action.
-- Live threat-intel results are cached with a shorter TTL than standard AI-only scans.
+![CyberGuard AI Telegram Bot Screenshot Placeholder](https://via.placeholder.com/1280x720.png?text=CyberGuard+AI+Telegram+Bot)

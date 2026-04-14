@@ -15,6 +15,7 @@ from database.models import Base, BotUser
 PLAN_LIMITS_MONTHLY = {
     "free": 5,
     "pro": 500,
+    "full": 5000,
     "enterprise": 999999,
 }
 

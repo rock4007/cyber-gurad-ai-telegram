@@ -40,6 +40,7 @@ def _optional_env(var_name: str) -> str | None:
 PLAN_LIMITS: dict[str, int] = {
     "free": 5,
     "pro": 500,
+    "full": 5000,
     "enterprise": 999999,
 }
 
@@ -90,6 +91,39 @@ class Settings:
     dehashed_email: str | None
     hunter_api_key: str | None
     urlscan_api_key: str | None
+    google_safe_browsing_api_key: str | None
+    abstract_api_key: str | None
+    leakcheck_api_key: str | None
+    breach_directory_api_key: str | None
+    spycloud_api_key: str | None
+    google_cloud_vision_api_key: str | None
+    aws_access_key_id: str | None
+    aws_secret_access_key: str | None
+    aws_region: str | None
+    imagga_api_key: str | None
+    imagga_api_secret: str | None
+    tineye_api_key: str | None
+    opencage_api_key: str | None
+    mapbox_api_key: str | None
+    geoapify_api_key: str | None
+    x_bearer_token: str | None
+    facebook_graph_api_token: str | None
+    instagram_access_token: str | None
+    linkedin_access_token: str | None
+    youtube_api_key: str | None
+    google_custom_search_api_key: str | None
+    google_geocoding_api_key: str | None
+    abuseipdb_api_key: str | None
+    tiktok_access_token: str | None
+    reddit_client_id: str | None
+    reddit_client_secret: str | None
+    reddit_user_agent: str | None
+    telegram_api_id: str | None
+    telegram_api_hash: str | None
+    email_database_url: str | None
+    email_intel_mode: str | None
+    social_media_mode: str | None
+    voice_recognition_mode: str | None
 
     @property
     def telegram_bot_token(self) -> str:
@@ -122,6 +156,39 @@ def _build_settings() -> Settings:
         dehashed_email=_optional_env("DEHASHED_EMAIL"),
         hunter_api_key=_optional_env("HUNTER_API_KEY"),
         urlscan_api_key=_optional_env("URLSCAN_API_KEY"),
+        google_safe_browsing_api_key=_optional_env("GOOGLE_SAFE_BROWSING_API_KEY"),
+        abstract_api_key=_optional_env("ABSTRACT_API_KEY"),
+        leakcheck_api_key=_optional_env("LEAKCHECK_API_KEY"),
+        breach_directory_api_key=_optional_env("BREACH_DIRECTORY_API_KEY"),
+        spycloud_api_key=_optional_env("SPYCLOUD_API_KEY"),
+        google_cloud_vision_api_key=_optional_env("GOOGLE_CLOUD_VISION_API_KEY"),
+        aws_access_key_id=_optional_env("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=_optional_env("AWS_SECRET_ACCESS_KEY"),
+        aws_region=_optional_env("AWS_REGION"),
+        imagga_api_key=_optional_env("IMAGGA_API_KEY"),
+        imagga_api_secret=_optional_env("IMAGGA_API_SECRET"),
+        tineye_api_key=_optional_env("TINEYE_API_KEY"),
+        opencage_api_key=_optional_env("OPENCAGE_API_KEY"),
+        mapbox_api_key=_optional_env("MAPBOX_API_KEY"),
+        geoapify_api_key=_optional_env("GEOAPIFY_API_KEY"),
+        x_bearer_token=_optional_env("X_BEARER_TOKEN"),
+        facebook_graph_api_token=_optional_env("FACEBOOK_GRAPH_API_TOKEN"),
+        instagram_access_token=_optional_env("INSTAGRAM_ACCESS_TOKEN"),
+        linkedin_access_token=_optional_env("LINKEDIN_ACCESS_TOKEN"),
+        youtube_api_key=_optional_env("YOUTUBE_API_KEY"),
+        google_custom_search_api_key=_optional_env("GOOGLE_CUSTOM_SEARCH_API_KEY"),
+        google_geocoding_api_key=_optional_env("GOOGLE_GEOCODING_API_KEY"),
+        abuseipdb_api_key=_optional_env("ABUSEIPDB_API_KEY"),
+        tiktok_access_token=_optional_env("TIKTOK_ACCESS_TOKEN"),
+        reddit_client_id=_optional_env("REDDIT_CLIENT_ID"),
+        reddit_client_secret=_optional_env("REDDIT_CLIENT_SECRET"),
+        reddit_user_agent=_optional_env("REDDIT_USER_AGENT"),
+        telegram_api_id=_optional_env("TELEGRAM_API_ID"),
+        telegram_api_hash=_optional_env("TELEGRAM_API_HASH"),
+        email_database_url=_optional_env("EMAIL_DATABASE_URL"),
+        email_intel_mode=_optional_env("EMAIL_INTEL_MODE"),
+        social_media_mode=_optional_env("SOCIAL_MEDIA_MODE"),
+        voice_recognition_mode=_optional_env("VOICE_RECOGNITION_MODE"),
     )
 
 

@@ -262,7 +262,21 @@ async def maybe_handle_social_message(
         ai_summary = "AI backend unavailable during this scan."
         ai_explanation = "No explanation available because the AI backend was unavailable during this scan."
 
-    final_score = min(100, round((local_score * 0.6) + (ai_score * 0.4)))
+    # Full Plan Google Dorking Multi-Layer research
+    research = None
+    try:
+        from services.full_plan_research import google_dorking_multi_scan
+        research = await google_dorking_multi_scan(handles[0] if handles else domains[0] if domains else text[:50], str(update.effective_user.id))
+        if research:
+            ai_score += research.get('scam_probability', 0)
+    except Exception:
+        research = {"status": "full_plan_required"}
+
+    research_score = int((research or {}).get("scam_probability", 0) or 0)
+    if research and research.get("status") != "full_plan_required":
+        final_score = min(100, round((local_score * 0.5) + (ai_score * 0.3) + (research_score * 0.2)))
+    else:
+        final_score = min(100, round((local_score * 0.6) + (ai_score * 0.4)))
     final_risk = _risk_level(final_score)
     report_id = await _next_social_report_id(context)
 
@@ -273,6 +287,7 @@ async def maybe_handle_social_message(
         "db_hits": db_hits,
         "local_score": local_score,
         "ai_score": ai_score,
+        "research": research,
         "final_score": final_score,
         "risk": final_risk,
         "ai_summary": ai_summary,

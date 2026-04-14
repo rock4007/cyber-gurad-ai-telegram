@@ -20,19 +20,19 @@ def _main_scan_menu_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("📞 Phone", callback_data="scan_phone"),
-                InlineKeyboardButton("🔗 URL", callback_data="scan_url"),
+                InlineKeyboardButton("Phone", callback_data="scan_phone"),
+                InlineKeyboardButton("URL", callback_data="scan_url"),
             ],
             [
-                InlineKeyboardButton("👤 Social", callback_data="scan_social"),
-                InlineKeyboardButton("📁 File", callback_data="scan_file"),
+                InlineKeyboardButton("Social", callback_data="scan_social"),
+                InlineKeyboardButton("File", callback_data="scan_file"),
             ],
             [
-                InlineKeyboardButton("🖼️ Image", callback_data="scan_image"),
-                InlineKeyboardButton("🎙️ Voice", callback_data="scan_voice"),
+                InlineKeyboardButton("Image", callback_data="scan_image"),
+                InlineKeyboardButton("Voice", callback_data="scan_voice"),
             ],
             [
-                InlineKeyboardButton("❓ Help", callback_data="open_help"),
+                InlineKeyboardButton("Help", callback_data="open_help"),
             ],
         ]
     )
@@ -106,8 +106,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if existing_user is None:
         await asyncio.to_thread(_create_user, tg_user.id, tg_user.username, tg_user.first_name)
         welcome_text = (
-            "🛡️ *CyberGuard AI*\n"
-            "_AI-powered scam protection_\n\n"
+            "CyberGuard AI\n"
+            "AI-powered scam protection\n\n"
             "What you can scan:\n"
             "- Suspicious phone numbers\n"
             "- Fraudulent URLs and text messages\n"
@@ -119,8 +119,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
         keyboard = InlineKeyboardMarkup(
             [
-                [InlineKeyboardButton("✅ I Agree to Terms", callback_data="agree_terms")],
-                [InlineKeyboardButton("🌐 Visit Website", url="https://cyberguard.ai")],
+                [InlineKeyboardButton("I Agree to Terms", callback_data="agree_terms")],
+                [InlineKeyboardButton("Visit Website", url="https://cyberguard.ai")],
             ]
         )
         await update.message.reply_text(
@@ -174,7 +174,7 @@ async def agreement_button_handler(update: Update, context: ContextTypes.DEFAULT
         return
 
     await query.edit_message_text(
-        "✅ *Agreement recorded successfully.*\nYou can now use CyberGuard AI scan features.",
+        "Agreement recorded successfully. You can now use CyberGuard AI scan features.",
         parse_mode=ParseMode.MARKDOWN,
     )
 

@@ -20,6 +20,8 @@ INSTANT_BAN_KEYWORDS = [
     "spy on",
     "find location of",
     "hack account",
+    "hack this account",
+    "hack this account for me",
     "bypass security",
     "ddos attack",
     "keylogger",
