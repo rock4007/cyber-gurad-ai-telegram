@@ -56,6 +56,10 @@ def test_scan_phone_medium_for_invalid_and_abstract_flag(monkeypatch) -> None:
     assert result["score"] == 40
     assert "Invalid or malformed number" in result["flags"]
     assert "Abstract phone API marked number invalid" in result["flags"]
+    assert result["details"]["artifact_id"].startswith("PHN-")
+    assert result["details"]["identity_label"] == result["details"]["artifact_id"]
+    assert result["details"]["masked_number"].startswith("+")
+    assert result["details"]["geo_mask"]
 
 
 def test_scan_url_high_when_multiple_signals(monkeypatch) -> None:
@@ -98,6 +102,26 @@ def test_scan_file_returns_fallback_for_missing_file() -> None:
     assert result["scan_type"] == "file"
     assert result["risk_level"] == "LOW"
     assert result["score"] == 0
+
+
+def test_scan_image_returns_artifact_and_authenticity(tmp_path) -> None:
+    from PIL import Image
+
+    service = AsyncScannerService()
+    image_path = tmp_path / "sample.png"
+    Image.new("RGB", (64, 64), color="red").save(image_path)
+
+    result = _run(service.scan_image(str(image_path), "u-img"))
+
+    assert result["scan_type"] == "image"
+    assert result["details"]["artifact_id"].startswith("IMG-")
+    assert result["details"]["authenticity"]["verdict"] in {
+        "inconclusive",
+        "likely_real",
+        "likely_edited",
+        "possible_ai_generated",
+    }
+    assert isinstance(result["details"]["authenticity"]["signals"], list)
 
 
 def test_scan_file_uses_virustotal_signal(monkeypatch, tmp_path) -> None:

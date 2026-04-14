@@ -1,8 +1,10 @@
 from pathlib import Path
 
-
 _HERE = Path(__file__).resolve().parent
-_BOT_HANDLERS = _HERE.parents[1] / "cyberguard-telegram" / "handlers"
+# _HERE          = d:\telegram bot\cyberguard-telegram\tests\handlers
+# parents[0]     = d:\telegram bot\cyberguard-telegram\tests
+# parents[1]     = d:\telegram bot\cyberguard-telegram   ← bot root
+_BOT_HANDLERS = _HERE.parents[1] / "handlers"
 
-# Keep tests importable while allowing `import handlers.start` to resolve to bot handlers.
+# Merge so `from handlers import investigate` finds the production module.
 __path__ = [str(_HERE), str(_BOT_HANDLERS)]

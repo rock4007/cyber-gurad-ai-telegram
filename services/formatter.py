@@ -89,6 +89,37 @@ def _origin_lines(data: dict) -> list[str]:
     return lines
 
 
+def _artifact_lines(data: dict) -> list[str]:
+    result = _result_obj(data)
+    details = result.get("details") or {}
+    if not isinstance(details, dict):
+        return []
+
+    lines: list[str] = []
+    artifact_id = str(details.get("artifact_id", "")).strip()
+    if artifact_id:
+        lines.extend([DIVIDER, f"Artifact ID: {_escape_md_v2(artifact_id)}"])
+
+    masked_number = str(details.get("masked_number", "")).strip()
+    if masked_number:
+        lines.append(f"Masked: {_escape_md_v2(masked_number)}")
+
+    geo_mask = str(details.get("geo_mask", "")).strip()
+    if geo_mask:
+        lines.append(f"Area: {_escape_md_v2(geo_mask)}")
+
+    authenticity = details.get("authenticity") if isinstance(details.get("authenticity"), dict) else {}
+    verdict = str(authenticity.get("verdict", "")).strip()
+    if verdict:
+        lines.append(f"Authenticity: {_escape_md_v2(verdict.replace('_', ' '))}")
+
+    masked_area = str(details.get("masked_area", "")).strip()
+    if masked_area:
+        lines.append(f"GPS area: {_escape_md_v2(masked_area)}")
+
+    return lines
+
+
 def _build_scan_message(title: str, data: dict, advice_default: str) -> str:
     level = _risk_level(data)
     score = _score(data)
@@ -109,6 +140,7 @@ def _build_scan_message(title: str, data: dict, advice_default: str) -> str:
     ]
 
     lines.extend(_origin_lines(data))
+    lines.extend(_artifact_lines(data))
 
     return _clip("\n".join(lines))
 

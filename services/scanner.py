@@ -14,6 +14,14 @@ from phonenumbers import carrier, geocoder
 from PIL import Image
 
 from config import SCAN_TIMEOUT, settings
+from services.investigation import (
+    build_artifact_id,
+    extract_gps_from_exif,
+    image_authenticity_assessment,
+    mask_coordinate_area,
+    mask_phone_number,
+    phone_geo_mask,
+)
 from services.origin_intel import OriginIntelligenceService
 from services.transcription import WhisperTranscriptionService
 
@@ -87,9 +95,13 @@ class AsyncScannerService:
         try:
             parsed = phonenumbers.parse(number, None)
             is_valid = phonenumbers.is_valid_number(parsed)
+            normalized_number = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
             region = phonenumbers.region_code_for_number(parsed) or "Unknown"
             country = geocoder.description_for_number(parsed, "en") or region
             telco = carrier.name_for_number(parsed, "en") or "Unknown"
+            artifact_id = build_artifact_id("PHN", normalized_number)
+            masked_number = mask_phone_number(normalized_number)
+            geo_mask = phone_geo_mask(parsed)
 
             abstract_data = None
             if self.abstract_phone_key:
@@ -141,6 +153,12 @@ class AsyncScannerService:
                 "flags": flags,
                 "details": {
                     "input": number,
+                    "normalized": normalized_number,
+                    "artifact_id": artifact_id,
+                    "identity_label": artifact_id,
+                    "identity_confidence": "unknown",
+                    "masked_number": masked_number,
+                    "geo_mask": geo_mask,
                     "is_valid": is_valid,
                     "country": country,
                     "carrier": telco,
@@ -364,16 +382,36 @@ class AsyncScannerService:
                 exif_data = dict(exif)
                 gps = exif_data.get(34853)
                 gps_found = bool(gps)
+                lat, lon = extract_gps_from_exif(exif_data)
+                software = exif_data.get(305)
+                taken_at = exif_data.get(36867) or exif_data.get(306)
                 exif_summary = {
                     "format": img.format,
                     "size": img.size,
                     "camera": exif_data.get(272) or exif_data.get(271),
+                    "device": exif_data.get(272) or exif_data.get(271) or "Unknown",
                     "gps_found": gps_found,
+                    "lat": lat,
+                    "lon": lon,
+                    "software": str(software or "No"),
+                    "taken_at": str(taken_at or "Unknown"),
                 }
 
+            authenticity = image_authenticity_assessment(exif_summary)
+            artifact_id = build_artifact_id("IMG", f"{path.name}:{path.stat().st_size}:{path.stat().st_mtime_ns}")
             score = 25 if gps_found else 0
             flags = ["GPS metadata present"] if gps_found else []
+            verdict = str(authenticity.get("verdict", "inconclusive"))
+            if verdict == "possible_ai_generated":
+                score = max(score, 55)
+                flags.append("Authenticity signals suggest AI-generated content")
+            elif verdict == "likely_edited":
+                score = max(score, 35)
+                flags.append("Image metadata suggests prior editing")
+
             risk = "MEDIUM" if gps_found else "LOW"
+            if score >= 40:
+                risk = "MEDIUM"
             return {
                 "scan_type": "image",
                 "risk_level": risk,
@@ -382,6 +420,9 @@ class AsyncScannerService:
                 "flags": flags,
                 "details": {
                     "filepath": str(path),
+                    "artifact_id": artifact_id,
+                    "masked_area": mask_coordinate_area(exif_summary.get("lat"), exif_summary.get("lon")),
+                    "authenticity": authenticity,
                     "exif": exif_summary,
                 },
                 "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),

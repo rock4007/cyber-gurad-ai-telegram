@@ -96,11 +96,17 @@ def test_format_phone_high_risk(formatter):
         "score": 85,
         "summary": "Known scam number.",
         "flags": ["Breach found"],
-        "details": {},
+        "details": {
+            "artifact_id": "PHN-ABC123",
+            "masked_number": "+91******3472",
+            "geo_mask": "India only",
+        },
     }
     msg = formatter.format_phone(data)
     assert "🔴" in msg
     assert "HIGH" in msg
+    assert "PHN" in msg
+    assert "India only" in msg
 
 
 # ── format_url ──────────────────────────────────────────────────────────────
@@ -137,8 +143,20 @@ def test_format_file_no_sha256(formatter):
 # ── format_image / format_voice ─────────────────────────────────────────────
 
 def test_format_image_title(formatter):
-    data = {"risk_level": "LOW", "score": 0, "flags": [], "summary": "No metadata."}
-    assert "CyberGuard Image Scan" in formatter.format_image(data)
+    data = {
+        "risk_level": "LOW",
+        "score": 0,
+        "flags": [],
+        "summary": "No metadata.",
+        "details": {
+            "artifact_id": "IMG-ABC123",
+            "authenticity": {"verdict": "inconclusive"},
+        },
+    }
+    msg = formatter.format_image(data)
+    assert "CyberGuard Image Scan" in msg
+    assert "IMG" in msg
+    assert "inconclusive" in msg
 
 
 def test_format_voice_title(formatter):

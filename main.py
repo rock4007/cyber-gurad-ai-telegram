@@ -16,6 +16,7 @@ from telegram.ext import (
 from config import settings
 from handlers.file import register_file_handlers
 from handlers.image import register_image_handlers
+from handlers.investigate import register_investigate_handlers
 from handlers.phone import maybe_handle_phone_text, register_phone_handlers
 from handlers.social import maybe_handle_social_message, register_social_handlers
 from handlers.start import help_command, register_start_handlers, start_command
@@ -182,6 +183,7 @@ async def post_init(application: Application) -> None:
         BotCommand("help", "Show help"),
         BotCommand("scan", "Show scan menu"),
         BotCommand("social", "Scan social media profile/message"),
+        BotCommand("investigate", "Investigate name + phone across breach databases"),
         BotCommand("status", "Show quota status"),
         BotCommand("language", "Set language preference"),
         BotCommand("report", "Report a scam"),
@@ -221,6 +223,7 @@ def build_application() -> Application:
     register_file_handlers(application)
     register_image_handlers(application)
     register_voice_handlers(application)
+    register_investigate_handlers(application)
     application.add_handler(CommandHandler("scan", scan_menu_command))
     application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CommandHandler("language", language_command))

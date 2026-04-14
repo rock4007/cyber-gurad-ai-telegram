@@ -37,6 +37,11 @@ BOT_ROOT = PROJECT_ROOT / "cyberguard-telegram"
 for p in (str(PROJECT_ROOT), str(BOT_ROOT)):
     if p not in sys.path:
         sys.path.insert(0, p)
+# tests/conftest.py lives at cyberguard-telegram/tests/conftest.py
+# parents[0] = tests/  parents[1] = cyberguard-telegram/  (the bot root itself)
+BOT_ROOT_INNER = Path(__file__).resolve().parents[1]
+if str(BOT_ROOT_INNER) not in sys.path:
+    sys.path.insert(0, str(BOT_ROOT_INNER))
 
 
 class _MockerProxy:

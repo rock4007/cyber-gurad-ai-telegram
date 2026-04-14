@@ -12,3 +12,5 @@ async def test_image_scan_returns_metadata(scanner_service, tmp_path):
 
     assert result["scan_type"] == "image"
     assert "exif" in result["details"]
+    assert "authenticity" in result["details"]
+    assert result["details"]["artifact_id"].startswith("IMG-")
