@@ -422,6 +422,55 @@ class TestSocialHandler:
         assert "suspicious" in social_mod._profile_verdict("MEDIUM", 50).lower()
         assert "no strong" in social_mod._profile_verdict("LOW", 10).lower()
 
+    def test_human_or_bot_assessment_bot_like(self, social_mod):
+        result = social_mod._human_or_bot_assessment(
+            "official support verify now!!! send otp!!! https://t.me/abc",
+            ["support_refund_team", "helpdesk", "alerts"],
+            [{"database": "Known Scam Handles DB", "match": "@support_refund_team", "reason": "x"}],
+        )
+        assert "bot" in str(result["label"]).lower()
+        assert int(result["bot_likelihood"]) >= 55
+
+    def test_human_or_bot_assessment_human_like(self, social_mod):
+        result = social_mod._human_or_bot_assessment(
+            "Hi, can you verify this profile?",
+            ["john_doe"],
+            [],
+        )
+        assert "human" in str(result["label"]).lower()
+
+    def test_x_lookup_assessment_scam_pattern(self, social_mod):
+        result = social_mod._x_lookup_assessment(
+            "x.com/scamacc guaranteed returns dm now",
+            ["scamacc"],
+            ["x.com"],
+            ["https://x.com/scamacc"],
+            [{"database": "Financial Scam Pattern DB", "match": "guaranteed returns", "reason": "x"}],
+        )
+        assert result is not None
+        assert "x_twitter" == result.get("platform")
+        assert "@" not in str(result.get("owner_identity", ""))
+        assert "Exact creation location" in str(result.get("origin_hint", ""))
+        assert "scam" in str(result.get("post_verdict", "")).lower() or "suspicious" in str(result.get("post_verdict", "")).lower()
+
+    def test_render_result_with_x_lookup_section(self, social_mod):
+        text = social_mod._render_result(
+            handles=["scammer"],
+            domains=["x.com"],
+            db_hits=[],
+            final_score=40,
+            final_risk="MEDIUM",
+            x_lookup={
+                "handles": ["scammer"],
+                "post_verdict": "Suspicious post pattern",
+                "owner_identity": "Not inferable from safe public OSINT",
+                "origin_hint": "Exact creation location is unavailable; only self-declared public profile fields are reliable",
+            },
+        )
+        assert "X/Twitter Lookup (Safe)" in text
+        assert "Post Verdict" in text
+        assert "Owner:" in text
+
     def test_invasive_attribution_request_detection(self, social_mod):
         assert social_mod._looks_like_invasive_attribution_request("tell me who made this telegram id") is True
         assert social_mod._looks_like_invasive_attribution_request("where it is made and exact location") is True
@@ -442,9 +491,11 @@ class TestSocialHandler:
             final_risk="HIGH",
             plan_name="full",
             agentic_summary="Likely staged impersonation plus payment extraction flow.",
+            human_bot={"label": "Likely Bot/Scripted", "bot_likelihood": 82, "signals": ["x"]},
         )
         assert "Master Agentic Chat Intel" in text
         assert "Plan: Full" in text
+        assert "Chat Algorithm" in text
 
 
 # ===================================================================

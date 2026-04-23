@@ -66,6 +66,17 @@ INVASIVE_ATTRIBUTION_TERMS = {
     "live location",
 }
 
+BOT_SIGNAL_TERMS = {
+    "guaranteed returns",
+    "send otp",
+    "verify now",
+    "limited time",
+    "official support",
+    "account verification",
+    "processing fee",
+    "dm now",
+}
+
 
 def _looks_like_social_text(text: str) -> bool:
     lowered = text.lower()
@@ -171,6 +182,94 @@ def _profile_verdict(final_risk: str, final_score: int) -> str:
     return "No strong scam/fake signal (still unverified)"
 
 
+def _human_or_bot_assessment(text: str, handles: list[str], db_hits: list[dict[str, str]]) -> dict[str, object]:
+    lowered = str(text or "").lower()
+    signal_points = 0
+    signals: list[str] = []
+
+    if len(handles) >= 3:
+        signal_points += 15
+        signals.append("multiple_handles_in_single_pitch")
+    if len(db_hits) >= 2:
+        signal_points += 25
+        signals.append("threat_intel_matches")
+    if any(term in lowered for term in BOT_SIGNAL_TERMS):
+        signal_points += 25
+        signals.append("scripted_persuasion_phrases")
+    if any(token in lowered for token in ("http://", "https://", "t.me/", "bit.ly")):
+        signal_points += 10
+        signals.append("link_drop_pattern")
+    if sum(1 for ch in str(text or "") if ch in "!?$") >= 6:
+        signal_points += 10
+        signals.append("punctuation_spam_pattern")
+
+    bot_likelihood = min(98, max(5, signal_points))
+    label = "Likely Bot/Scripted" if bot_likelihood >= 55 else "Likely Human"
+    return {
+        "label": label,
+        "bot_likelihood": bot_likelihood,
+        "signals": signals,
+    }
+
+
+def _x_lookup_assessment(
+    text: str,
+    handles: list[str],
+    domains: list[str],
+    urls: list[str],
+    db_hits: list[dict[str, str]],
+) -> dict[str, object] | None:
+    has_x_domain = any(d in {"x.com", "twitter.com"} for d in domains)
+    if not has_x_domain and not any("x.com/" in u.lower() or "twitter.com/" in u.lower() for u in urls):
+        return None
+
+    x_handles: list[str] = []
+    for url in urls:
+        lowered = url.lower()
+        if "x.com/" not in lowered and "twitter.com/" not in lowered:
+            continue
+        parsed = urlparse(url)
+        path = (parsed.path or "").strip("/")
+        if path:
+            candidate = path.split("/", 1)[0].strip().lstrip("@").lower()
+            if candidate and candidate not in {"home", "explore", "search", "i"} and candidate not in x_handles:
+                x_handles.append(candidate)
+
+    for handle in handles:
+        h = str(handle or "").strip().lower()
+        if h and h not in x_handles:
+            x_handles.append(h)
+
+    lowered = str(text or "").lower()
+    scam_terms = {
+        "airdrop",
+        "guaranteed returns",
+        "send otp",
+        "verify now",
+        "processing fee",
+        "dm now",
+        "crypto doubling",
+    }
+    scam_hit_count = sum(1 for term in scam_terms if term in lowered)
+    scam_hit_count += sum(1 for hit in db_hits if "Scam" in str(hit.get("database", "")))
+
+    if scam_hit_count >= 2:
+        post_verdict = "Likely scam post pattern"
+    elif scam_hit_count == 1:
+        post_verdict = "Suspicious post pattern"
+    else:
+        post_verdict = "No strong scam signal in provided post text"
+
+    return {
+        "platform": "x_twitter",
+        "handles": x_handles[:5],
+        "owner_identity": "Not inferable from safe public OSINT",
+        "origin_hint": "Exact creation location is unavailable; only self-declared public profile fields are reliable",
+        "post_verdict": post_verdict,
+        "scam_signal_count": scam_hit_count,
+    }
+
+
 def _is_master_plan(plan: str | None) -> bool:
     return str(plan or "").strip().lower() in {"full", "master", "enterprise"}
 
@@ -197,6 +296,8 @@ def _render_result(
     final_risk: str,
     plan_name: str = "free",
     agentic_summary: str = "",
+    human_bot: dict | None = None,
+    x_lookup: dict | None = None,
 ) -> str:
     handles_line = ", ".join(f"@{h}" for h in handles[:4]) if handles else "None"
     domains_line = ", ".join(domains[:4]) if domains else "None"
@@ -213,9 +314,17 @@ def _render_result(
         "Database checks: 4/4 completed",
         f"Matches found: {len(db_hits)}",
         f"Risk: {_risk_label(final_risk)} ({final_score}/100)",
+    ]
+
+    if human_bot:
+        lines.append(
+            f"Chat Algorithm: {human_bot.get('label', 'Unknown')} ({human_bot.get('bot_likelihood', 0)}% bot-likelihood)"
+        )
+
+    lines.extend([
         "─────────────────",
         "⚠️ Intelligence Hits:",
-    ]
+    ])
 
     if db_hits:
         for hit in db_hits[:6]:
@@ -228,6 +337,17 @@ def _render_result(
             "─────────────────",
             "🧠 Master Agentic Chat Intel:",
             agentic_summary,
+        ])
+
+    if x_lookup:
+        handles_text = ", ".join(f"@{h}" for h in (x_lookup.get("handles") or [])) or "None"
+        lines.extend([
+            "─────────────────",
+            "🐦 X/Twitter Lookup (Safe)",
+            f"Handles: {handles_text}",
+            f"Post Verdict: {x_lookup.get('post_verdict', 'Unknown')}",
+            f"Owner: {x_lookup.get('owner_identity', 'Unknown')}",
+            f"Origin Hint: {x_lookup.get('origin_hint', 'Unknown')}",
         ])
 
     lines.extend(
@@ -300,6 +420,8 @@ async def maybe_handle_social_message(
     is_master = _is_master_plan(user_plan)
 
     db_hits = _database_checks(text, handles, domains)
+    human_bot = _human_or_bot_assessment(text, handles, db_hits)
+    x_lookup = _x_lookup_assessment(text, handles, domains, urls, db_hits)
     local_score = min(100, len(db_hits) * 22 + (10 if domains else 0))
 
     ai_score = 0
@@ -366,6 +488,8 @@ async def maybe_handle_social_message(
         "ai_explanation": ai_explanation,
         "plan": user_plan,
         "agentic": agentic,
+        "human_bot": human_bot,
+        "x_lookup": x_lookup,
     }
 
     await progress.edit_text("✅ Social media database checks complete.")
@@ -378,6 +502,8 @@ async def maybe_handle_social_message(
             final_risk=final_risk,
             plan_name=user_plan,
             agentic_summary=str((agentic or {}).get("intel_summary") or ""),
+            human_bot=human_bot,
+            x_lookup=x_lookup,
         ),
         reply_markup=_buttons(report_id, high_risk=final_risk == "HIGH"),
     )
@@ -434,6 +560,26 @@ async def social_full_report_callback(update: Update, context: ContextTypes.DEFA
         "Database hits:\n"
         f"{hits_text}"
     )
+    human_bot = report.get("human_bot") if isinstance(report.get("human_bot"), dict) else None
+    if human_bot:
+        signals = human_bot.get("signals") or []
+        signal_text = ", ".join(str(s) for s in signals[:5]) if signals else "none"
+        details += (
+            "\n\n🤖 Chat Algorithm (Human vs Bot)\n"
+            f"Label: {human_bot.get('label', 'Unknown')}\n"
+            f"Bot likelihood: {human_bot.get('bot_likelihood', 0)}%\n"
+            f"Signals: {signal_text}"
+        )
+    x_lookup = report.get("x_lookup") if isinstance(report.get("x_lookup"), dict) else None
+    if x_lookup:
+        handles_text = ", ".join(f"@{h}" for h in (x_lookup.get("handles") or [])) or "None"
+        details += (
+            "\n\n🐦 X/Twitter Lookup (Safe)\n"
+            f"Handles: {handles_text}\n"
+            f"Post Verdict: {x_lookup.get('post_verdict', 'Unknown')}\n"
+            f"Owner: {x_lookup.get('owner_identity', 'Unknown')}\n"
+            f"Origin Hint: {x_lookup.get('origin_hint', 'Unknown')}"
+        )
     agentic = report.get("agentic") if isinstance(report.get("agentic"), dict) else None
     if agentic:
         controls = agentic.get("recommended_controls") or []
