@@ -1,15 +1,15 @@
-"""Subscription plans handler with 3DS Secure payment gateways."""
-import asyncio
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import CallbackQueryHandler, ContextTypes
-from telegram.constants import ParseMode
+"""Subscription plans handler with payment links."""
 
-from cyberguard-telegram.services.payment import MultiGatewayPayment, PaymentPlans
-from cyberguard-telegram.database.models import get_or_create_user
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.constants import ParseMode
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
+
+from middleware.quota import _next_month_reset_text, quota_guard
+from services.payment import MultiGatewayPayment, PaymentPlans
 
 
 async def plans_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    \"\"\"Display subscription plans with payment buttons.\"""
+    """Display subscription plans with payment buttons."""
     if not update.effective_user or not update.message:
         return
 
@@ -21,8 +21,8 @@ async def plans_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             InlineKeyboardButton("💎 Pro - $12/mo", callback_data=f"pay_pro_usd_{user_id}"),
         ],
         [
-            InlineKeyboardButton("🔥 Full - ₹499/mo", callback_data=f"pay_full_inr_{user_id}"),
-            InlineKeyboardButton("🌍 Full - $6/mo", callback_data=f"pay_full_usd_{user_id}"),
+            InlineKeyboardButton("🔥 Master - ₹499/mo", callback_data=f"pay_full_inr_{user_id}"),
+            InlineKeyboardButton("🌍 Master - $6/mo", callback_data=f"pay_full_usd_{user_id}"),
         ],
         [InlineKeyboardButton("🏢 Enterprise (Custom)", callback_data="enterprise_contact")],
         [InlineKeyboardButton("📊 My Status", callback_data="show_status")]
@@ -35,8 +35,10 @@ async def plans_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         f"💎 *Pro*: {PaymentPlans.PRO['limit']} scans/month\n"
         f"  • Priority scans • Darkweb lookup\n"
         f"  *India*: ₹{PaymentPlans.PRO['price_inr']} | *Global*: ${PaymentPlans.PRO['price_usd']}\n\n"
-        f"🔥 *Full*: {PaymentPlans.FULL['limit']} scans/month\n"
-        f"  • Malware analysis • IP/MAC geo • Advanced intel\n"
+        f"🔥 *Master* (Full): {PaymentPlans.FULL['limit']} scans/month\n"
+        f"  • Agentic voice catch + deep scam cues\n"
+        f"  • Agentic chat/social threat graph\n"
+        f"  • IP/MAC/social advanced intel + all detection stack\n"
         f"  *India*: ₹{PaymentPlans.FULL['price_inr']} | *Global*: ${PaymentPlans.FULL['price_usd']}\n\n"
         f"🏢 *Enterprise*: Unlimited + Dedicated API + Custom\n\n"
         f"*✅ All payments 3DS Secure (Stripe + Razorpay)*\n"
@@ -52,7 +54,7 @@ async def plans_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    \"\"\"Handle payment button clicks - generate 3DS checkout URLs.\"""
+    """Handle payment button clicks and generate checkout links."""
     query = update.callback_query
     if not query:
         return
@@ -67,7 +69,6 @@ async def payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         user_id = query.from_user.id if query.from_user else None
         
         if user_id:
-            from services.payment import MultiGatewayPayment
             payment = MultiGatewayPayment(None)
             checkout_url = await payment.create_checkout_session(str(user_id), plan, currency)
             
@@ -84,14 +85,13 @@ async def payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 async def show_status_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    \"\"\"Show user current plan/status.\"""
+    """Show user current plan/status."""
     query = update.callback_query
     if not query or not query.from_user:
         return
     
     await query.answer()
     
-    from middleware.quota import quota_guard
     user_id = query.from_user.id
     allowed, plan, used, limit = await quota_guard.check_and_increment(
         user_id=user_id, username=query.from_user.username, first_name=query.from_user.first_name
@@ -114,10 +114,9 @@ async def show_status_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 def register_plans_handlers(application: Application) -> None:
-    \"\"\"Register all payment handlers.\"""
-    from telegram.ext import CommandHandler, CallbackQueryHandler
-    
+    """Register all payment handlers."""
+
     application.add_handler(CommandHandler("plans", plans_command))
-    application.add_handler(CallbackQueryHandler(payment_callback, pattern=r"^(pay_|enterprise|status)"))
+    application.add_handler(CallbackQueryHandler(payment_callback, pattern=r"^(pay_|enterprise_contact$|show_status$|status$)"))
     application.add_handler(CallbackQueryHandler(show_status_callback, pattern="^show_status$"))
 

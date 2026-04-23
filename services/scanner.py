@@ -27,6 +27,35 @@ from services.transcription import WhisperTranscriptionService
 
 
 logger = logging.getLogger("cyberguard.scanner")
+SOCIAL_IMAGE_HINTS: dict[str, tuple[str, ...]] = {
+    "instagram": ("instagram", "insta", "ig"),
+    "facebook": ("facebook", "fb"),
+    "x/twitter": ("twitter", "x.com", "tweet"),
+    "tiktok": ("tiktok",),
+    "youtube": ("youtube", "yt"),
+    "reddit": ("reddit",),
+    "telegram": ("telegram", "t.me"),
+}
+
+
+def _image_social_footprint_hints(path: Path, exif_summary: dict[str, Any]) -> dict[str, Any]:
+    text_blob = " ".join(
+        [
+            path.name.lower(),
+            str(exif_summary.get("software") or "").lower(),
+            str(exif_summary.get("device") or "").lower(),
+        ]
+    )
+    platforms: list[str] = []
+    for platform, needles in SOCIAL_IMAGE_HINTS.items():
+        if any(needle in text_blob for needle in needles):
+            platforms.append(platform)
+
+    return {
+        "platforms": platforms,
+        "public_footprint_likely": bool(platforms),
+        "note": "Educational OSINT hint only. Not proof of who posted.",
+    }
 
 
 class AsyncScannerService:
@@ -423,6 +452,7 @@ class AsyncScannerService:
                     "artifact_id": artifact_id,
                     "masked_area": mask_coordinate_area(exif_summary.get("lat"), exif_summary.get("lon")),
                     "authenticity": authenticity,
+                    "social_footprint": _image_social_footprint_hints(path, exif_summary),
                     "exif": exif_summary,
                 },
                 "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -514,6 +544,108 @@ class AsyncScannerService:
             return "Threat report is temporarily unavailable."
         finally:
             logger.info("generate_report finished in %.2fms", (time.perf_counter() - started) * 1000)
+
+    async def generate_agentic_voice_insights(self, *, transcript: str, user_id: str) -> dict[str, Any]:
+        """Master-plan only: deeper defensive voice intelligence from transcript context."""
+        lowered = str(transcript or "").lower()
+        heuristic_tactics: list[str] = []
+        if any(token in lowered for token in ("otp", "pin", "cvv", "password")):
+            heuristic_tactics.append("credential_harvest")
+        if any(token in lowered for token in ("urgent", "immediately", "now", "last warning")):
+            heuristic_tactics.append("urgency_pressure")
+        if any(token in lowered for token in ("bank", "police", "cbi", "hmrc", "government")):
+            heuristic_tactics.append("authority_impersonation")
+
+        fallback = {
+            "mode": "master_agentic",
+            "threat_story": "Likely social-engineering style call; verify identity via trusted channels.",
+            "tactics": heuristic_tactics,
+            "urgency_score": min(100, 20 + len(heuristic_tactics) * 20),
+            "impersonation_risk": "high" if "authority_impersonation" in heuristic_tactics else "medium",
+            "next_best_actions": [
+                "Do not share OTP/PIN or remote-access details.",
+                "Call the claimed organization using an official number.",
+                "Preserve call recording and metadata for reporting.",
+            ],
+        }
+
+        try:
+            response = await self._claude.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=320,
+                temperature=0,
+                system=(
+                    "You are a defensive voice-fraud copilot. "
+                    "Return strict JSON with keys: threat_story, tactics, urgency_score, impersonation_risk, next_best_actions."
+                ),
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"user_id={user_id}\nAnalyze transcript for advanced scam intelligence:\n{transcript}",
+                    }
+                ],
+            )
+            text = "\n".join(str(getattr(chunk, "text", "")) for chunk in (response.content or [])).strip()
+            parsed = json.loads(text)
+            return {
+                "mode": "master_agentic",
+                "threat_story": str(parsed.get("threat_story") or fallback["threat_story"]),
+                "tactics": [str(x) for x in (parsed.get("tactics") or fallback["tactics"])],
+                "urgency_score": int(parsed.get("urgency_score", fallback["urgency_score"]) or fallback["urgency_score"]),
+                "impersonation_risk": str(parsed.get("impersonation_risk") or fallback["impersonation_risk"]),
+                "next_best_actions": [str(x) for x in (parsed.get("next_best_actions") or fallback["next_best_actions"])],
+            }
+        except Exception:
+            return fallback
+
+    async def generate_agentic_chat_insights(self, *, content: str, user_id: str) -> dict[str, Any]:
+        """Master-plan only: deeper defensive chat/social message intelligence."""
+        lowered = str(content or "").lower()
+        heuristic_markers = {
+            "payment_pressure": any(t in lowered for t in ("send payment", "processing fee", "crypto")),
+            "credential_request": any(t in lowered for t in ("otp", "password", "pin", "verification code")),
+            "impersonation": any(t in lowered for t in ("official support", "security team", "bank")),
+        }
+        heuristic_risk = min(100, 15 + sum(25 for v in heuristic_markers.values() if v))
+        fallback = {
+            "mode": "master_agentic",
+            "attack_graph": [k for k, v in heuristic_markers.items() if v],
+            "risk_score": heuristic_risk,
+            "intel_summary": "Message shows potential social-engineering flow. Validate sender identity before action.",
+            "recommended_controls": [
+                "Block and report suspicious profile/account.",
+                "Do not transfer funds or share credentials.",
+                "Capture evidence (chat links, timestamps, screenshots).",
+            ],
+        }
+
+        try:
+            response = await self._claude.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=320,
+                temperature=0,
+                system=(
+                    "You are a defensive chat-fraud copilot. "
+                    "Return strict JSON with keys: attack_graph, risk_score, intel_summary, recommended_controls."
+                ),
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"user_id={user_id}\nAnalyze this social/chat content for advanced fraud intelligence:\n{content}",
+                    }
+                ],
+            )
+            text = "\n".join(str(getattr(chunk, "text", "")) for chunk in (response.content or [])).strip()
+            parsed = json.loads(text)
+            return {
+                "mode": "master_agentic",
+                "attack_graph": [str(x) for x in (parsed.get("attack_graph") or fallback["attack_graph"])],
+                "risk_score": int(parsed.get("risk_score", fallback["risk_score"]) or fallback["risk_score"]),
+                "intel_summary": str(parsed.get("intel_summary") or fallback["intel_summary"]),
+                "recommended_controls": [str(x) for x in (parsed.get("recommended_controls") or fallback["recommended_controls"])],
+            }
+        except Exception:
+            return fallback
 
 
 class ScannerService(AsyncScannerService):

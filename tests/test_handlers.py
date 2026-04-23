@@ -414,6 +414,25 @@ class TestSocialHandler:
         assert "HIGH" in text
         assert "@scammer" in text
 
+    def test_is_master_plan(self, social_mod):
+        assert social_mod._is_master_plan("full") is True
+        assert social_mod._is_master_plan("master") is True
+        assert social_mod._is_master_plan("enterprise") is True
+        assert social_mod._is_master_plan("pro") is False
+
+    def test_render_result_with_agentic_summary(self, social_mod):
+        text = social_mod._render_result(
+            handles=["scammer"],
+            domains=["t.me"],
+            db_hits=[],
+            final_score=70,
+            final_risk="HIGH",
+            plan_name="full",
+            agentic_summary="Likely staged impersonation plus payment extraction flow.",
+        )
+        assert "Master Agentic Chat Intel" in text
+        assert "Plan: Full" in text
+
 
 # ===================================================================
 # handlers/voice.py (pure utility functions)
@@ -468,6 +487,35 @@ class TestVoiceHandler:
         assert "Aadhaar Blocked Scam" in text
         assert "Deepfake" in text or "deepfake" in text.lower()
 
+    def test_is_master_plan(self, voice_mod):
+        assert voice_mod._is_master_plan("full") is True
+        assert voice_mod._is_master_plan("master") is True
+        assert voice_mod._is_master_plan("enterprise") is True
+        assert voice_mod._is_master_plan("free") is False
+
+    def test_build_voice_result_text_with_master_insights(self, voice_mod):
+        analysis = {
+            "hit_count": 1,
+            "matched_phrases": ["send otp"],
+            "dominant_scam_type": "OTP Theft",
+            "confidence": 35,
+        }
+        text = voice_mod._build_voice_result_text(
+            "please send otp now",
+            analysis,
+            deepfake_percent=44,
+            explanation="Possible coercive scam content.",
+            master_insights={
+                "threat_story": "Caller used urgency and authority claims to extract OTP.",
+                "urgency_score": 81,
+                "impersonation_risk": "high",
+                "tactics": ["urgency_pressure", "credential_harvest"],
+                "next_best_actions": ["Do not share OTP"],
+            },
+        )
+        assert "Master Agentic Voice Intel" in text
+        assert "Urgency Score: 81" in text
+
 
 # ===================================================================
 # handlers/image.py (pure utility functions)
@@ -512,3 +560,27 @@ class TestImageHandler:
         )
         assert "JPEG" in text
         assert "iPhone" in text
+
+    def test_infer_social_footprint_from_filename_and_software(self, image_mod):
+        footprint = image_mod._infer_social_footprint(
+            filename="instagram_post_2026.jpg",
+            caption="my upload",
+            metadata={"software": "Instagram", "device": "iPhone"},
+            backend_details={},
+        )
+        assert footprint["public_footprint_likely"] is True
+        assert "instagram" in footprint["platforms"]
+
+    def test_build_image_result_includes_social_footprint(self, image_mod):
+        text = image_mod._build_image_result_text(
+            filename="photo.jpg",
+            size_bytes=100_000,
+            metadata={"format": "JPEG", "device": "Android", "taken_at": "2024-01-01", "edited": "No", "gps_found": False, "software": "No"},
+            ai_percent=20,
+            risk_level="LOW",
+            risk_msg="No location metadata.",
+            hide_coordinates=True,
+            social_footprint={"public_footprint_likely": True, "probable_posted_on": "instagram, x/twitter"},
+        )
+        assert "Social Footprint" in text
+        assert "instagram" in text

@@ -9,7 +9,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Cont
 
 from config import settings
 from middleware.guards import check_text_policy
-from middleware.quota import check_quota
+from middleware.quota import check_quota, quota_guard
 from services.scanner import ScannerService
 from services.transcription import WhisperTranscriptionService
 
@@ -98,7 +98,18 @@ def _deepfake_likelihood(analysis: dict, backend_score: int) -> int:
     return min(95, max(12, 10 + analysis["hit_count"] * 8 + round(backend_score * 0.18)))
 
 
-def _build_voice_result_text(transcript: str, analysis: dict, *, deepfake_percent: int, explanation: str) -> str:
+def _is_master_plan(plan: str | None) -> bool:
+    return str(plan or "").strip().lower() in {"full", "master", "enterprise"}
+
+
+def _build_voice_result_text(
+    transcript: str,
+    analysis: dict,
+    *,
+    deepfake_percent: int,
+    explanation: str,
+    master_insights: dict | None = None,
+) -> str:
     quoted_transcript = transcript if len(transcript) <= 600 else transcript[:597] + "..."
     phrase_lines = "\n".join(f'• "{phrase}"' for phrase in analysis["matched_phrases"]) or "• None detected"
 
@@ -125,6 +136,21 @@ def _build_voice_result_text(transcript: str, analysis: dict, *, deepfake_percen
         "🚩 Suspicious phrases:",
         phrase_lines,
     ])
+
+    if master_insights:
+        lines.extend([
+            "─────────────────",
+            "🧠 Master Agentic Voice Intel",
+            f"Threat Story: {master_insights.get('threat_story', 'N/A')}",
+            f"Urgency Score: {master_insights.get('urgency_score', 'N/A')}",
+            f"Impersonation Risk: {str(master_insights.get('impersonation_risk', 'unknown')).upper()}",
+        ])
+        tactics = master_insights.get("tactics") or []
+        if tactics:
+            lines.append("Tactics: " + ", ".join(str(t) for t in tactics[:5]))
+        controls = master_insights.get("next_best_actions") or []
+        for control in controls[:3]:
+            lines.append(f"• {control}")
 
     if analysis["hit_count"] > 0:
         lines.extend([
@@ -166,6 +192,17 @@ async def voice_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
     progress = await update.message.reply_text("🎙️ Transcribing audio... (1/3)")
 
+    user_plan = "free"
+    try:
+        if update.effective_user:
+            user_plan = await quota_guard.get_plan(
+                update.effective_user.id,
+                update.effective_user.username,
+                update.effective_user.first_name,
+            )
+    except Exception:
+        user_plan = "free"
+
     temp_path: str | None = None
     try:
         file = await context.bot.get_file(media.file_id)
@@ -195,6 +232,12 @@ async def voice_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         local_confidence = analysis["confidence"]
         analysis["confidence"] = max(local_confidence, min(99, round((local_confidence * 0.6) + (backend_score * 0.4))))
         deepfake_percent = _deepfake_likelihood(analysis, backend_score)
+        master_insights = None
+        if _is_master_plan(user_plan):
+            master_insights = await scanner.generate_agentic_voice_insights(
+                transcript=transcript,
+                user_id=str(update.effective_user.id) if update.effective_user else "",
+            )
 
         context.user_data[f"voice_report:{report_id}"] = {
             "transcript": transcript,
@@ -202,6 +245,8 @@ async def voice_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             "deepfake_percent": deepfake_percent,
             "explanation": explanation,
             "file_name": file_name,
+            "master_insights": master_insights,
+            "plan": user_plan,
         }
 
         keyboard = InlineKeyboardMarkup(
@@ -218,6 +263,7 @@ async def voice_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 analysis,
                 deepfake_percent=deepfake_percent,
                 explanation=explanation,
+                master_insights=master_insights,
             ),
             reply_markup=keyboard,
         )

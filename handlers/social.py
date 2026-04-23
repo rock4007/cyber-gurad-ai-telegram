@@ -7,7 +7,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Cont
 
 from config import settings
 from middleware.guards import check_text_policy
-from middleware.quota import check_quota
+from middleware.quota import check_quota, quota_guard
 from services.scanner import ScannerService
 
 
@@ -145,6 +145,10 @@ def _risk_label(risk_level: str) -> str:
     return "🟢 LOW"
 
 
+def _is_master_plan(plan: str | None) -> bool:
+    return str(plan or "").strip().lower() in {"full", "master", "enterprise"}
+
+
 def _buttons(report_id: int, high_risk: bool) -> InlineKeyboardMarkup:
     first_row = [InlineKeyboardButton("📋 Full DB Report", callback_data=f"social_full:{report_id}")]
     if high_risk:
@@ -165,6 +169,8 @@ def _render_result(
     db_hits: list[dict[str, str]],
     final_score: int,
     final_risk: str,
+    plan_name: str = "free",
+    agentic_summary: str = "",
 ) -> str:
     handles_line = ", ".join(f"@{h}" for h in handles[:4]) if handles else "None"
     domains_line = ", ".join(domains[:4]) if domains else "None"
@@ -172,6 +178,7 @@ def _render_result(
     lines = [
         "🛡️ Social Media Scanner",
         "─────────────────",
+        f"Plan: {plan_name.title()}",
         f"Handles: {handles_line}",
         f"Domains: {domains_line}",
         "─────────────────",
@@ -187,6 +194,13 @@ def _render_result(
             lines.append(f"• [{hit['database']}] {hit['match']} - {hit['reason']}")
     else:
         lines.append("• No direct threat-intel database matches")
+
+    if agentic_summary:
+        lines.extend([
+            "─────────────────",
+            "🧠 Master Agentic Chat Intel:",
+            agentic_summary,
+        ])
 
     lines.extend(
         [
@@ -238,6 +252,18 @@ async def maybe_handle_social_message(
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
     progress = await update.message.reply_text("🔎 Running full social-media database checks...")
 
+    user_plan = "free"
+    try:
+        if update.effective_user:
+            user_plan = await quota_guard.get_plan(
+                update.effective_user.id,
+                update.effective_user.username,
+                update.effective_user.first_name,
+            )
+    except Exception:
+        user_plan = "free"
+    is_master = _is_master_plan(user_plan)
+
     db_hits = _database_checks(text, handles, domains)
     local_score = min(100, len(db_hits) * 22 + (10 if domains else 0))
 
@@ -262,19 +288,30 @@ async def maybe_handle_social_message(
         ai_summary = "AI backend unavailable during this scan."
         ai_explanation = "No explanation available because the AI backend was unavailable during this scan."
 
-    # Full Plan Google Dorking Multi-Layer research
+    # Master Plan Google Dorking Multi-Layer research
     research = None
-    try:
-        from services.full_plan_research import google_dorking_multi_scan
-        research = await google_dorking_multi_scan(handles[0] if handles else domains[0] if domains else text[:50], str(update.effective_user.id))
-        if research:
-            ai_score += research.get('scam_probability', 0)
-    except Exception:
-        research = {"status": "full_plan_required"}
+    if is_master:
+        try:
+            from services.full_plan_research import google_dorking_multi_scan
+            research = await google_dorking_multi_scan(handles[0] if handles else domains[0] if domains else text[:50], str(update.effective_user.id))
+            if research:
+                ai_score += research.get('scam_probability', 0)
+        except Exception:
+            research = {"status": "master_plan_error"}
+    else:
+        research = {"status": "master_plan_required"}
+
+    agentic = None
+    if is_master:
+        agentic = await scanner.generate_agentic_chat_insights(
+            content=text,
+            user_id=str(update.effective_user.id) if update.effective_user else "",
+        )
 
     research_score = int((research or {}).get("scam_probability", 0) or 0)
-    if research and research.get("status") != "full_plan_required":
-        final_score = min(100, round((local_score * 0.5) + (ai_score * 0.3) + (research_score * 0.2)))
+    agentic_score = int((agentic or {}).get("risk_score", 0) or 0)
+    if is_master and research and research.get("status") not in {"master_plan_required", "master_plan_error"}:
+        final_score = min(100, round((local_score * 0.45) + (ai_score * 0.3) + (research_score * 0.15) + (agentic_score * 0.1)))
     else:
         final_score = min(100, round((local_score * 0.6) + (ai_score * 0.4)))
     final_risk = _risk_level(final_score)
@@ -292,6 +329,8 @@ async def maybe_handle_social_message(
         "risk": final_risk,
         "ai_summary": ai_summary,
         "ai_explanation": ai_explanation,
+        "plan": user_plan,
+        "agentic": agentic,
     }
 
     await progress.edit_text("✅ Social media database checks complete.")
@@ -302,6 +341,8 @@ async def maybe_handle_social_message(
             db_hits=db_hits,
             final_score=final_score,
             final_risk=final_risk,
+            plan_name=user_plan,
+            agentic_summary=str((agentic or {}).get("intel_summary") or ""),
         ),
         reply_markup=_buttons(report_id, high_risk=final_risk == "HIGH"),
     )
@@ -346,6 +387,7 @@ async def social_full_report_callback(update: Update, context: ContextTypes.DEFA
 
     details = (
         "📋 Full Social Scanner Report\n"
+        f"Plan: {str(report.get('plan', 'free')).title()}\n"
         f"Risk: {_risk_label(str(report.get('risk', 'LOW')))} ({report.get('final_score', 0)}/100)\n"
         f"Local DB score: {report.get('local_score', 0)}/100\n"
         f"AI score: {report.get('ai_score', 0)}/100\n"
@@ -354,6 +396,17 @@ async def social_full_report_callback(update: Update, context: ContextTypes.DEFA
         "Database hits:\n"
         f"{hits_text}"
     )
+    agentic = report.get("agentic") if isinstance(report.get("agentic"), dict) else None
+    if agentic:
+        controls = agentic.get("recommended_controls") or []
+        controls_text = "\n".join(f"• {str(item)}" for item in controls[:3]) or "• None"
+        details += (
+            "\n\n🧠 Master Agentic Chat Intel\n"
+            f"Summary: {agentic.get('intel_summary', 'N/A')}\n"
+            f"Risk Score: {agentic.get('risk_score', 0)}/100\n"
+            "Recommended Controls:\n"
+            f"{controls_text}"
+        )
     await query.message.reply_text(details)
 
 
