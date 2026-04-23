@@ -413,6 +413,19 @@ class TestSocialHandler:
         )
         assert "HIGH" in text
         assert "@scammer" in text
+        assert "Safe OSINT limits" in text
+        assert "Profile Verdict" in text
+        assert "Gender Hint: Not inferred" in text
+
+    def test_profile_verdict_levels(self, social_mod):
+        assert "scam/fake" in social_mod._profile_verdict("HIGH", 85).lower()
+        assert "suspicious" in social_mod._profile_verdict("MEDIUM", 50).lower()
+        assert "no strong" in social_mod._profile_verdict("LOW", 10).lower()
+
+    def test_invasive_attribution_request_detection(self, social_mod):
+        assert social_mod._looks_like_invasive_attribution_request("tell me who made this telegram id") is True
+        assert social_mod._looks_like_invasive_attribution_request("where it is made and exact location") is True
+        assert social_mod._looks_like_invasive_attribution_request("check if this is scam") is False
 
     def test_is_master_plan(self, social_mod):
         assert social_mod._is_master_plan("full") is True

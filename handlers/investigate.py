@@ -295,6 +295,8 @@ def _build_report(report: dict) -> str:
         lines.append(f"👥 Telegram Group: @{query['telegram_group']}")
     if query.get("twitter_id"):
         lines.append(f"🐦 X/Twitter ID: @{query['twitter_id']}")
+    if query.get("telegram_id") or query.get("telegram_group") or query.get("twitter_id"):
+        lines.append("🛡️ Safe Intel: creator identity and exact/live location are not inferred")
 
     lines += [
         "─────────────────────────",

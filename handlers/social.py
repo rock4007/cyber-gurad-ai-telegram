@@ -54,6 +54,18 @@ DB_FINANCIAL_SCAM_TERMS = {
     "instant loan approval",
 }
 
+INVASIVE_ATTRIBUTION_TERMS = {
+    "who made",
+    "who created",
+    "real owner",
+    "find owner",
+    "where it is made",
+    "where made",
+    "exact location",
+    "track this account",
+    "live location",
+}
+
 
 def _looks_like_social_text(text: str) -> bool:
     lowered = text.lower()
@@ -62,6 +74,11 @@ def _looks_like_social_text(text: str) -> bool:
         or bool(SOCIAL_URL_PATTERN.search(text))
         or any(word in lowered for word in ["instagram", "telegram", "facebook", "x.com", "twitter", "whatsapp"])
     )
+
+
+def _looks_like_invasive_attribution_request(text: str) -> bool:
+    lowered = str(text or "").lower()
+    return any(term in lowered for term in INVASIVE_ATTRIBUTION_TERMS)
 
 
 def _extract_targets(text: str) -> tuple[list[str], list[str], list[str]]:
@@ -145,6 +162,15 @@ def _risk_label(risk_level: str) -> str:
     return "🟢 LOW"
 
 
+def _profile_verdict(final_risk: str, final_score: int) -> str:
+    risk = str(final_risk or "LOW").upper()
+    if risk == "HIGH" or final_score >= 70:
+        return "Likely scam/fake profile (defensive signal)"
+    if risk == "MEDIUM" or final_score >= 40:
+        return "Suspicious profile (needs manual verification)"
+    return "No strong scam/fake signal (still unverified)"
+
+
 def _is_master_plan(plan: str | None) -> bool:
     return str(plan or "").strip().lower() in {"full", "master", "enterprise"}
 
@@ -179,6 +205,8 @@ def _render_result(
         "🛡️ Social Media Scanner",
         "─────────────────",
         f"Plan: {plan_name.title()}",
+        f"Profile Verdict: {_profile_verdict(final_risk, final_score)}",
+        "Gender Hint: Not inferred (safe mode)",
         f"Handles: {handles_line}",
         f"Domains: {domains_line}",
         "─────────────────",
@@ -205,6 +233,7 @@ def _render_result(
     lines.extend(
         [
             "─────────────────",
+            "Safe OSINT limits: creator identity and exact location are not inferred.",
             "Always verify account age, followers quality, and payment requests before responding.",
         ]
     )
@@ -248,6 +277,12 @@ async def maybe_handle_social_message(
     if not ok:
         await update.message.reply_text(error_message)
         return True
+
+    if _looks_like_invasive_attribution_request(text):
+        await update.message.reply_text(
+            "Safety mode: exact owner identity or live/exact location attribution is not supported. "
+            "Proceeding with defensive public-risk analysis only."
+        )
 
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
     progress = await update.message.reply_text("🔎 Running full social-media database checks...")
@@ -388,11 +423,14 @@ async def social_full_report_callback(update: Update, context: ContextTypes.DEFA
     details = (
         "📋 Full Social Scanner Report\n"
         f"Plan: {str(report.get('plan', 'free')).title()}\n"
+        f"Profile Verdict: {_profile_verdict(str(report.get('risk', 'LOW')), int(report.get('final_score', 0) or 0))}\n"
+        "Gender Hint: Not inferred (safe mode)\n"
         f"Risk: {_risk_label(str(report.get('risk', 'LOW')))} ({report.get('final_score', 0)}/100)\n"
         f"Local DB score: {report.get('local_score', 0)}/100\n"
         f"AI score: {report.get('ai_score', 0)}/100\n"
         f"AI summary: {report.get('ai_summary') or 'No summary'}\n"
         f"AI explanation: {report.get('ai_explanation') or 'No explanation'}\n"
+        "Safe OSINT limits: creator identity and exact location are not inferred.\n"
         "Database hits:\n"
         f"{hits_text}"
     )
