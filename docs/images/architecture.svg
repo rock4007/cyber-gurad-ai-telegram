@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f3f7ff"/>
+      <stop offset="100%" stop-color="#eefaf4"/>
+    </linearGradient>
+    <style>
+      .title { font: 700 34px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 18px 'Segoe UI', Arial, sans-serif; fill: #334155; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 14; }
+      .h { font: 700 19px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .t { font: 500 15px 'Segoe UI', Arial, sans-serif; fill: #334155; }
+      .label { font: 600 13px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .arrow { stroke: #0ea5e9; stroke-width: 3; fill: none; marker-end: url(#m); }
+      .note { font: 600 14px 'Segoe UI', Arial, sans-serif; fill: #166534; }
+    </style>
+    <marker id="m" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <polygon points="0,0 10,5 0,10" fill="#0ea5e9"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="680" fill="url(#bg)"/>
+  <text x="60" y="62" class="title">CyberGuard Telegram: Defensive Intelligence Architecture</text>
+  <text x="60" y="92" class="subtitle">Public-source OSINT + breach intel + policy guardrails</text>
+
+  <rect class="box" x="70" y="150" width="240" height="130"/>
+  <text x="90" y="185" class="h">Telegram User</text>
+  <text x="90" y="212" class="t">Commands and uploads:</text>
+  <text x="90" y="236" class="t">/scan, /investigate, media</text>
+
+  <rect class="box" x="380" y="120" width="280" height="190"/>
+  <text x="400" y="155" class="h">Handlers + Middleware</text>
+  <text x="400" y="182" class="t">validation, quota, moderation,</text>
+  <text x="400" y="206" class="t">consent and tier parsing</text>
+  <text x="400" y="244" class="label">basic / pro / master</text>
+  <text x="400" y="268" class="label">privacy:on | privacy:off</text>
+
+  <rect class="box" x="740" y="95" width="380" height="245"/>
+  <text x="760" y="130" class="h">Cross-Database Investigator</text>
+  <text x="760" y="157" class="t">correlates phone, email, IP, MAC,</text>
+  <text x="760" y="181" class="t">and social identifiers</text>
+  <text x="760" y="219" class="t">returns scored evidence + report</text>
+  <text x="760" y="243" class="t">with tier-aware data visibility</text>
+
+  <rect class="box" x="380" y="385" width="300" height="220"/>
+  <text x="400" y="420" class="h">Storage and Cache</text>
+  <text x="400" y="447" class="t">PostgreSQL</text>
+  <text x="400" y="471" class="t">Redis</text>
+  <text x="400" y="509" class="t">audit trail + temporary artifacts</text>
+
+  <rect class="box" x="740" y="385" width="380" height="220"/>
+  <text x="760" y="420" class="h">External Intelligence Sources</text>
+  <text x="760" y="447" class="t">HaveIBeenPwned, LeakCheck, DeHashed</text>
+  <text x="760" y="471" class="t">NumVerify, Abstract, Abuse.ch</text>
+  <text x="760" y="495" class="t">social profile surface checks</text>
+  <text x="760" y="533" class="note">Defensive-only output. No surveillance.</text>
+
+  <path class="arrow" d="M310,215 L380,215"/>
+  <path class="arrow" d="M660,215 L740,215"/>
+  <path class="arrow" d="M860,340 L860,385"/>
+  <path class="arrow" d="M530,310 L530,385"/>
+  <path class="arrow" d="M740,520 L680,520"/>
+</svg>

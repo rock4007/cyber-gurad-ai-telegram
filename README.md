@@ -1,79 +1,177 @@
 # CyberGuard AI Telegram Bot
 
-CyberGuard AI is a defensive Telegram bot that analyzes suspicious phone numbers, URLs, files, images, and voice notes. This repository is ready for Railway.app deployment on a free stack.
+CyberGuard AI is a defensive Telegram bot for triaging suspicious indicators and generating evidence-backed reports from public and breach-intelligence sources.
+
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/Platform-Telegram%20Bot-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots)
+[![Deployment](https://img.shields.io/badge/Deploy-Railway-0B0D0E?logo=railway&logoColor=white)](https://railway.app/)
+[![License](https://img.shields.io/badge/License-See%20LICENSE-16a34a)](LICENSE)
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new)
 
+## Architecture
+
+![CyberGuard Architecture](docs/images/architecture.svg)
+
+## Tier and Privacy Model
+
+![Tier Privacy Matrix](docs/images/tier-privacy-matrix.svg)
+
+## Product Screenshots
+
+![Investigate Flow Screenshot](docs/images/screenshot-investigate.svg)
+![Scan Flow Screenshot](docs/images/screenshot-scan.svg)
+
+Core visibility policy:
+
+- `basic`: IP, MAC, and social identifiers are masked.
+- `pro` and `master`: real IP, MAC, and social identifiers are available when `privacy:off`.
+- all tiers with `privacy:on`: identifiers are masked.
+- all tiers with no consent (`consent:no` / missing consent token): sensitive identity enrichment is redacted.
+- tracking remains disabled in all modes.
+
+## Feature Highlights
+
+- Cross-source investigation for phone, email, IP, MAC, and social identifiers.
+- Tier-aware output controls (`basic`, `pro`, `master`).
+- Consent-aware enrichment redaction.
+- Report scoring, evidence source attribution, and risk flags.
+- Media handler coverage for URL, file, image, and voice workflows.
+- Production-ready deployment for Railway with PostgreSQL and Redis.
+
+## Project Layout
+
+```text
+cyberguard-telegram/
+	handlers/        # Telegram command and media handlers
+	services/        # Investigation, scanning, enrichment services
+	middleware/      # Quota and moderation controls
+	database/        # Models and persistence
+	tests/           # Unit, handler, integration, and e2e tests
+	docs/images/     # README diagrams
+```
+
+## Quick Start (Local)
+
+1. Clone and enter the project directory.
+2. Create and activate a virtual environment.
+3. Install dependencies.
+4. Copy `.env.example` to `.env` and fill required values.
+5. Run the bot.
+
+```bash
+python -m venv .venv
+. .venv/Scripts/activate  # Windows PowerShell: .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python main.py
+```
+
 ## Required Environment Variables
 
-| Variable | Required | Example |
-|---|---|---|
-| BOT_TOKEN | Yes | 123456:ABCDEF |
-| ANTHROPIC_API_KEY | Yes | sk-ant-api03-xxxx |
-| DATABASE_URL | Yes | postgresql://user:pass@host/db |
-| REDIS_URL | Yes | redis://default:pass@host:6379 |
-| ADMIN_IDS | Yes | 123456789,987654321 |
-| BACKEND_URL | Yes | https://your-api.up.railway.app |
-| ENVIRONMENT | Yes | production |
+| Variable | Required | Description | Example |
+|---|---|---|---|
+| `BOT_TOKEN` | Yes | Telegram bot token | `123456:ABCDEF` |
+| `ANTHROPIC_API_KEY` | Yes | LLM API key for AI analysis | `sk-ant-api03-xxxx` |
+| `DATABASE_URL` | Yes | PostgreSQL connection string | `postgresql://user:pass@host/db` |
+| `REDIS_URL` | Yes | Redis connection string | `redis://default:pass@host:6379` |
+| `ADMIN_IDS` | Yes | Comma-separated Telegram admin IDs | `123456789,987654321` |
+| `BACKEND_URL` | Yes | Optional companion backend URL | `https://your-api.up.railway.app` |
+| `ENVIRONMENT` | Yes | Runtime profile | `production` |
 
-## Setup (Max 5 Steps)
+## Investigation Command Examples
 
-1. Clone this repo and open the cyberguard-telegram folder.
-2. Install Python dependencies from requirements.txt.
-3. Create Railway project and set all required environment variables.
-4. Add free PostgreSQL and Redis connection strings.
-5. Deploy and verify bot startup logs show python main.py running.
+```text
+/investigate +919876543210
+/investigate pro consent:yes email:test@example.com
+/investigate master privacy:off ip:1.1.1.1 mac:00-1A-2B-3C-4D-5E
+/investigate pro tg:sample_user group:fraud_watch twitter:samplex
+```
 
-## Railway CLI Commands (Exact)
+## Railway Deployment
 
-# Install Railway CLI
+### CLI Workflow
+
+```bash
 npm i -g @railway/cli
-
-# Login
 railway login
-
-# Create project
 railway init
 
-# Set environment variables
 railway vars set BOT_TOKEN=xxx
 railway vars set ANTHROPIC_API_KEY=xxx
 railway vars set DATABASE_URL=xxx
 railway vars set REDIS_URL=xxx
+railway vars set ADMIN_IDS=123,456
+railway vars set BACKEND_URL=https://your-api.up.railway.app
+railway vars set ENVIRONMENT=production
 
-# Deploy
 railway up
+```
 
-## Free Database Options
+### Free Database Pairing
 
-### PostgreSQL (Neon free tier)
+- PostgreSQL: Neon (`DATABASE_URL`)
+- Redis: Upstash (`REDIS_URL`)
 
-- Provider: neon.tech
-- Free tier: up to 3 GB storage
-- Steps:
-1. Create a Neon project and database.
-2. Copy the pooled PostgreSQL connection string.
-3. In Railway, set DATABASE_URL to the Neon URL.
-4. Ensure sslmode=require is present if Neon requires SSL.
+After setting both URLs, redeploy and verify startup logs include a successful `python main.py` launch.
 
-### Redis (Upstash free tier)
+## Backend API Integration
 
-- Provider: upstash.com
-- Free tier: 10k commands/day
-- Steps:
-1. Create an Upstash Redis database.
-2. Copy the Redis URL.
-3. In Railway, set REDIS_URL to the Upstash URL.
-4. Redeploy after variables are saved.
+This Telegram bot can run standalone, but it can also integrate with an external backend service via `BACKEND_URL`.
 
-## Connect Neon + Upstash to Railway
+Common integration patterns:
 
-1. Open Railway project Settings and Variables.
-2. Paste Neon URL as DATABASE_URL.
-3. Paste Upstash URL as REDIS_URL.
-4. Add remaining required bot variables.
-5. Run railway up and monitor logs until worker is healthy.
+- Enrich scan/investigation flows with central policy services.
+- Store results in a shared backend for dashboards and analytics.
+- Centralize admin workflows and incident handling.
 
-## Screenshot Placeholder
+Suggested backend endpoints (example contract):
 
-![CyberGuard AI Telegram Bot Screenshot Placeholder](https://via.placeholder.com/1280x720.png?text=CyberGuard+AI+Telegram+Bot)
+```text
+POST /api/scan
+POST /api/investigate
+GET  /api/health
+GET  /api/reports/{artifact_id}
+```
+
+Suggested payload fields for scan/investigate:
+
+```json
+{
+	"source": "telegram",
+	"consent_confirmed": true,
+	"privacy_mode": false,
+	"tier": "pro",
+	"content": "suspicious input or identifier"
+}
+```
+
+Set backend URL in environment:
+
+```bash
+railway vars set BACKEND_URL=https://your-api.up.railway.app
+```
+
+## Quality and Testing
+
+Run the full test suite:
+
+```bash
+pytest -q
+```
+
+Run only investigation tests:
+
+```bash
+pytest -q tests/handlers/test_investigate_handler.py
+```
+
+## Security and Usage Policy
+
+- Defensive and educational use only.
+- Illegal or abusive requests are blocked by design.
+- Reports are generated from public and breach-intelligence sources.
+- Real-time tracking and covert surveillance are not supported.
+
+## License
+
+This project is licensed under the terms of the `LICENSE` file in this repository.

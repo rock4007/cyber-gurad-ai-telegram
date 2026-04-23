@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#ecfeff"/>
+    </linearGradient>
+    <style>
+      .title { font: 700 30px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .sub { font: 500 16px 'Segoe UI', Arial, sans-serif; fill: #334155; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 14; }
+      .chatbg { fill: #eff6ff; }
+      .user { fill: #dbeafe; stroke: #93c5fd; stroke-width: 1.5; rx: 12; }
+      .bot { fill: #ecfdf5; stroke: #86efac; stroke-width: 1.5; rx: 12; }
+      .txt { font: 600 14px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .mono { font: 600 13px 'Consolas', monospace; fill: #0f172a; }
+      .small { font: 500 12px 'Segoe UI', Arial, sans-serif; fill: #334155; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <text x="48" y="56" class="title">Screenshot: Investigate Flow</text>
+  <text x="48" y="84" class="sub">Illustrative UI preview for README documentation</text>
+
+  <rect x="48" y="116" width="1184" height="560" class="panel"/>
+  <rect x="72" y="140" width="1140" height="512" class="chatbg" rx="12"/>
+
+  <rect x="96" y="170" width="420" height="52" class="user"/>
+  <text x="112" y="202" class="mono">/investigate pro privacy:off ip:8.8.8.8 mac:00:1A:2B:3C:4D:5E</text>
+
+  <rect x="96" y="244" width="980" height="318" class="bot"/>
+  <text x="116" y="278" class="txt">Investigation Report</text>
+  <text x="116" y="304" class="small">Plan Tier: PRO | Consent: YES | Privacy Mode: OFF</text>
+  <text x="116" y="328" class="small">IP: 8.8.8.8 | IP Geo: Mountain View, United States | ISP: Google LLC</text>
+  <text x="116" y="352" class="small">MAC: 00:1A:2B:3C:4D:5E | MAC Vendor: Test Vendor Inc</text>
+  <text x="116" y="376" class="small">Risk: MEDIUM (35/100)</text>
+  <text x="116" y="410" class="small">Evidence Sources:</text>
+  <text x="140" y="434" class="small">- ip_geolocation</text>
+  <text x="140" y="456" class="small">- mac_vendor_lookup</text>
+  <text x="140" y="478" class="small">- haveibeenpwned_email</text>
+  <text x="116" y="516" class="small">Educational and defensive use only.</text>
+
+  <rect x="96" y="586" width="560" height="42" class="panel"/>
+  <text x="116" y="613" class="small">Buttons: Full Evidence | Export JSON | New Investigation</text>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff7ed"/>
+      <stop offset="100%" stop-color="#f0f9ff"/>
+    </linearGradient>
+    <style>
+      .title { font: 700 30px 'Segoe UI', Arial, sans-serif; fill: #111827; }
+      .sub { font: 500 16px 'Segoe UI', Arial, sans-serif; fill: #374151; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 14; }
+      .user { fill: #ffedd5; stroke: #fdba74; stroke-width: 1.5; rx: 12; }
+      .bot { fill: #f0fdf4; stroke: #86efac; stroke-width: 1.5; rx: 12; }
+      .txt { font: 600 14px 'Segoe UI', Arial, sans-serif; fill: #1f2937; }
+      .mono { font: 600 13px 'Consolas', monospace; fill: #111827; }
+      .small { font: 500 12px 'Segoe UI', Arial, sans-serif; fill: #374151; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bg2)"/>
+  <text x="48" y="56" class="title">Screenshot: URL Scan Flow</text>
+  <text x="48" y="84" class="sub">Illustrative UI preview for README documentation</text>
+
+  <rect x="48" y="116" width="1184" height="560" class="panel"/>
+  <rect x="72" y="140" width="1140" height="512" fill="#fff7ed" rx="12"/>
+
+  <rect x="96" y="170" width="520" height="52" class="user"/>
+  <text x="112" y="202" class="mono">/scan https://suspicious-example-login-check.com</text>
+
+  <rect x="96" y="244" width="990" height="300" class="bot"/>
+  <text x="116" y="278" class="txt">Scan Result</text>
+  <text x="116" y="304" class="small">Risk Level: HIGH (71/100)</text>
+  <text x="116" y="328" class="small">Summary: The URL shows phishing-style indicators and suspicious domain patterns.</text>
+  <text x="116" y="352" class="small">Indicators:</text>
+  <text x="140" y="376" class="small">- Brand impersonation keyword in path</text>
+  <text x="140" y="398" class="small">- Recently registered domain</text>
+  <text x="140" y="420" class="small">- URL redirection chain detected</text>
+  <text x="116" y="458" class="small">Recommended Actions:</text>
+  <text x="140" y="482" class="small">- Do not enter credentials</text>
+  <text x="140" y="504" class="small">- Report domain to security team</text>
+</svg>
